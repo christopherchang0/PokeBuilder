@@ -6,6 +6,7 @@ Frontend:
 - Node.js
 - Flask
 - React
+  
 Backend:
 - Python
 - MongoDB
