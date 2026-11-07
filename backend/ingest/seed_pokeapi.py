@@ -48,3 +48,25 @@ pokemon = {
 }
 print(pokemon)
 
+with conn.cursor() as cur:
+    cur.execute(
+        """
+        INSERT INTO pokemon_species (id, name, generation)
+        VALUES (%(id)s, %(name)s, %(generation)s)
+        ON CONFLICT (id) DO NOTHING
+        """,
+        species,
+    )
+    cur.execute(
+        """
+        INSERT INTO pokemon (id, species_id, name, is_default, type_1, type_2,
+                             hp, attack, defense, sp_attack, sp_defense, speed)
+        VALUES (%(id)s, %(species_id)s, %(name)s, %(is_default)s, %(type_1)s, %(type_2)s,
+                %(hp)s, %(attack)s, %(defense)s, %(sp_attack)s, %(sp_defense)s, %(speed)s)
+        ON CONFLICT (id) DO NOTHING
+        """,
+        pokemon,
+    )
+
+conn.commit()
+conn.close()
