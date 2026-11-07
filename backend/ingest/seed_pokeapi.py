@@ -8,7 +8,7 @@ import json
 
 load_dotenv()
 
-
+SUPABASE_DATBASE_URL = os.getenv("SUPABASE_DATABASE_URL")
 # Cache setup
 CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "pokeapi"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -33,7 +33,7 @@ def fetch_json(url):
     return data
 
 def id_from_url(url):
-    id = int(url["generation"]["url"].rstrip("/").split("/")[-1])
+    id = int(url.rstrip("/").split("/")[-1])
     return id
 
 
@@ -100,7 +100,26 @@ def insert_pokemon(cur, pokemon):
         pokemon,
     )
 
+def main():
+    species_list = fetch_json("https://pokeapi.co/api/v2/pokemon-species?limit=2000")["results"]
 
+    with psycopg.connect(SUPABASE_DATBASE_URL) as conn:
+        for entry in species_list[:3]:  # remove [:3] once this works
+            species_data = fetch_json(entry["url"])
+
+            with conn.cursor() as cur:
+                insert_species(cur, parse_species(species_data))
+
+                for variety in species_data["varieties"]:
+                    pokemon_data = fetch_json(variety["pokemon"]["url"])
+                    insert_pokemon(cur, parse_pokemon(pokemon_data))
+
+            conn.commit()  # save after each species
+            print(f"Seeded {species_data['name']}")
+
+
+if __name__ == "__main__":
+    main()
 
 #steps
 #double loop. Outer loop builds species, inner builds the pokemon
