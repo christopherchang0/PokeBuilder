@@ -103,13 +103,16 @@ def insert_pokemon(cur, pokemon):
 def main():
     species_list = fetch_json("https://pokeapi.co/api/v2/pokemon-species?limit=2000")["results"]
 
+    #dials to supabase
     with psycopg.connect(SUPABASE_DATBASE_URL) as conn:
-        for entry in species_list[:3]:  # remove [:3] once this works
+        for entry in species_list: 
             species_data = fetch_json(entry["url"])
 
+            #sends to SQL
             with conn.cursor() as cur:
                 insert_species(cur, parse_species(species_data))
 
+                #looks through each of the different forms for each pokemon
                 for variety in species_data["varieties"]:
                     pokemon_data = fetch_json(variety["pokemon"]["url"])
                     insert_pokemon(cur, parse_pokemon(pokemon_data))
@@ -120,6 +123,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#steps
-#double loop. Outer loop builds species, inner builds the pokemon
