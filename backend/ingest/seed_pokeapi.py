@@ -2,8 +2,35 @@ import os
 from dotenv import load_dotenv
 import psycopg
 import requests
+from pathlib import Path
+import json
+
 
 load_dotenv()
+
+
+# Cache setup
+CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "pokeapi"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+def fetch_json(url):
+    # e.g. .../api/v2/pokemon/1 -> pokemon_1.json
+    filename = url.rstrip("/").split("/api/v2/")[-1].replace("/", "_") + ".json"
+    path = CACHE_DIR / filename
+
+    if path.exists():
+        with open(path) as f:
+            return json.load(f)
+
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    temp_path = path.with_suffix(".tmp")
+
+    with open(temp_path, "w") as f:
+        json.dump(data, f)
+    temp_path.replace(path)
+    return data
 
 SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL")
 conn = psycopg.connect(SUPABASE_DATABASE_URL)
@@ -17,10 +44,7 @@ with conn.cursor() as cur:
     print(result)  # Outputs: (1,)
 
 POKEAPI_URL = "https://pokeapi.co/api/v2/pokemon-species/1"
-response = requests.get(POKEAPI_URL, timeout=10)
-#check if pulled correctly
-response.raise_for_status()
-data = response.json()
+data = fetch_json(POKEAPI_URL)
 species = {
     "id": data["id"],
     "name": data["name"],
@@ -28,9 +52,7 @@ species = {
 }
 print(species)
 
-pokemon_response = requests.get("https://pokeapi.co/api/v2/pokemon/1", timeout=10)
-pokemon_response.raise_for_status()
-pokemon_data = pokemon_response.json()
+pokemon_data = fetch_json("https://pokeapi.co/api/v2/pokemon/1")
 stats = {s["stat"]["name"]: s["base_stat"] for s in pokemon_data["stats"]}
 pokemon = {
     "id": pokemon_data["id"],
