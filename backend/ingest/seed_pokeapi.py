@@ -32,47 +32,43 @@ def fetch_json(url):
     temp_path.replace(path)
     return data
 
-SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL")
-conn = psycopg.connect(SUPABASE_DATABASE_URL)
-# 2. Open a cursor to perform database operations
-with conn.cursor() as cur:
-    # 3. Execute the query
-    cur.execute("SELECT 1;")
+def id_from_url(url):
+    id = int(url["generation"]["url"].rstrip("/").split("/")[-1])
+    return id
 
-    # 4. Fetch the result
-    result = cur.fetchone()
-    print(result)  # Outputs: (1,)
 
-POKEAPI_URL = "https://pokeapi.co/api/v2/pokemon-species/1"
-data = fetch_json(POKEAPI_URL)
-species = {
-    "id": data["id"],
-    "name": data["name"],
-    "generation": int(data["generation"]["url"].rstrip("/").split("/")[-1])
-}
-print(species)
+# POKEAPI_URL = "https://pokeapi.co/api/v2/pokemon-species/1"
+# data = fetch_json(POKEAPI_URL)
 
-pokemon_data = fetch_json("https://pokeapi.co/api/v2/pokemon/1")
-stats = {s["stat"]["name"]: s["base_stat"] for s in pokemon_data["stats"]}
-pokemon = {
-    "id": pokemon_data["id"],
-    "species_id": int(pokemon_data["species"]["url"].rstrip("/").split("/")[-1]),
-    "name": pokemon_data["name"],
-    "is_default": pokemon_data["is_default"],
-    "type_1": pokemon_data["types"][0]["type"]["name"],
-    "type_2": pokemon_data["types"][1]["type"]["name"] if len(pokemon_data["types"]) > 1 else None,
-    "hp": stats["hp"],
-    "attack": stats["attack"],
-    "defense": stats["defense"],
-    "sp_attack": stats["special-attack"],
-    "sp_defense": stats["special-defense"],
-    "speed": stats["speed"],
-}
-print(pokemon)
+def parse_species(data):
+    species = {
+        "id": data["id"],
+        "name": data["name"],
+        "generation": id_from_url(data["generation"]["url"])
+    }
+    return species
 
-with conn.cursor() as cur:
-    cur.execute(
-    """
+# pokemon_data = fetch_json("https://pokeapi.co/api/v2/pokemon/1")
+def parse_pokemon(pokemon_data):
+    stats = {s["stat"]["name"]: s["base_stat"] for s in pokemon_data["stats"]}
+    pokemon = {
+        "id": pokemon_data["id"],
+        "species_id": id_from_url(pokemon_data["species"]["url"]),
+        "name": pokemon_data["name"],
+        "is_default": pokemon_data["is_default"],
+        "type_1": pokemon_data["types"][0]["type"]["name"],
+        "type_2": pokemon_data["types"][1]["type"]["name"] if len(pokemon_data["types"]) > 1 else None,
+        "hp": stats["hp"],
+        "attack": stats["attack"],
+        "defense": stats["defense"],
+        "sp_attack": stats["special-attack"],
+        "sp_defense": stats["special-defense"],
+        "speed": stats["speed"],
+    }
+    return pokemon
+
+def insert_species(cur, species):
+    cur.execute("""
     INSERT INTO pokemon_species (id, name, generation)
     VALUES (%(id)s, %(name)s, %(generation)s)
     ON CONFLICT (id) DO UPDATE SET
@@ -81,6 +77,7 @@ with conn.cursor() as cur:
     """,
     species,
     )
+def insert_pokemon(cur, pokemon):
     cur.execute(
         """
         INSERT INTO pokemon (id, species_id, name, is_default, type_1, type_2,
@@ -104,5 +101,6 @@ with conn.cursor() as cur:
     )
 
 
-conn.commit()
-conn.close()
+
+#steps
+#double loop. Outer loop builds species, inner builds the pokemon
