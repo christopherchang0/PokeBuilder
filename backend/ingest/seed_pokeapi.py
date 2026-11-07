@@ -50,23 +50,37 @@ print(pokemon)
 
 with conn.cursor() as cur:
     cur.execute(
-        """
-        INSERT INTO pokemon_species (id, name, generation)
-        VALUES (%(id)s, %(name)s, %(generation)s)
-        ON CONFLICT (id) DO NOTHING
-        """,
-        species,
+    """
+    INSERT INTO pokemon_species (id, name, generation)
+    VALUES (%(id)s, %(name)s, %(generation)s)
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        generation = EXCLUDED.generation
+    """,
+    species,
     )
     cur.execute(
         """
         INSERT INTO pokemon (id, species_id, name, is_default, type_1, type_2,
-                             hp, attack, defense, sp_attack, sp_defense, speed)
+                            hp, attack, defense, sp_attack, sp_defense, speed)
         VALUES (%(id)s, %(species_id)s, %(name)s, %(is_default)s, %(type_1)s, %(type_2)s,
                 %(hp)s, %(attack)s, %(defense)s, %(sp_attack)s, %(sp_defense)s, %(speed)s)
-        ON CONFLICT (id) DO NOTHING
+        ON CONFLICT (id) DO UPDATE SET
+            species_id = EXCLUDED.species_id,
+            name = EXCLUDED.name,
+            is_default = EXCLUDED.is_default,
+            type_1 = EXCLUDED.type_1,
+            type_2 = EXCLUDED.type_2,
+            hp = EXCLUDED.hp,
+            attack = EXCLUDED.attack,
+            defense = EXCLUDED.defense,
+            sp_attack = EXCLUDED.sp_attack,
+            sp_defense = EXCLUDED.sp_defense,
+            speed = EXCLUDED.speed
         """,
         pokemon,
     )
+
 
 conn.commit()
 conn.close()
